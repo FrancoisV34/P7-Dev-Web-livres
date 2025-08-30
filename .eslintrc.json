@@ -11,6 +11,11 @@
   },
   "plugins": ["react"],
   "rules": {
+    "react/jsx-curly-brace-presence": [
+      "off",
+      { "props": "never", "children": "never" }
+    ],
+
     "comma-dangle": [
       "off",
       {
