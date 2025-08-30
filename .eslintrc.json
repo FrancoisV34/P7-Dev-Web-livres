@@ -12,7 +12,7 @@
   "plugins": ["react"],
   "rules": {
     "comma-dangle": [
-      "error",
+      "off",
       {
         "arrays": "never",
         "objects": "never",
