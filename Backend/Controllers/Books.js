@@ -1,8 +1,7 @@
 const fs = require('fs');
-const Book = require('../Models/Book');
 const sharp = require('sharp');
 const path = require('path');
-const { error } = require('console');
+const Book = require('../Models/Book');
 
 exports.createBook = async (req, res, next) => {
   if (!req.file) {
@@ -34,34 +33,43 @@ exports.createBook = async (req, res, next) => {
     });
 };
 
-exports.modifyBook = (req, res, next) => {
-  const bookObject = req.file
-    ? {
+exports.modifyBook = async (req, res, next) => {
+  try {
+    let bookObject;
+    if (req.file) {
+      const filename =
+        Date.now() + '-' + req.file.originalname.split('.')[0] + '.webp';
+      const filepath = path.join(__dirname, `../images/${filename}`);
+
+      await sharp(req.file.path).webp({ quality: 80 }).toFile(filepath);
+      bookObject = {
         ...JSON.parse(req.body.book),
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${
-          req.file.filename
-        }`,
-      }
-    : { ...req.body };
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${filename}`,
+      };
+    } else {
+      bookObject = { ...req.body };
+    }
+    delete bookObject._userId;
 
-  delete bookObject._userId;
-
-  Book.findOne({ _id: req.params.id })
-    .then((book) => {
-      if (book.userId != req.auth.userId) {
-        res.status(401).json({ message: 'Non-autorisé' });
-      } else {
-        Book.updateOne(
-          { _id: req.params.id },
-          { ...bookObject, _id: req.params.id }
-        )
-          .then(() => res.status(200).json({ message: 'Livre modifié !' }))
-          .catch((error) => res.status(401).json({ error }));
-      }
-    })
-    .catch((error) => {
-      res.status(400).json({ error });
-    });
+    await Book.findOne({ _id: req.params.id })
+      .then((book) => {
+        if (book.userId != req.auth.userId) {
+          res.status(401).json({ message: 'Non-autorisé' });
+        } else {
+          Book.updateOne(
+            { _id: req.params.id },
+            { ...bookObject, _id: req.params.id }
+          )
+            .then(() => res.status(200).json({ message: 'Livre modifié !' }))
+            .catch((error) => res.status(401).json({ error }));
+        }
+      })
+      .catch((error) => {
+        res.status(400).json({ error });
+      });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 };
 
 exports.deleteBook = (req, res, next) => {
