@@ -3,13 +3,12 @@ const sharp = require('sharp');
 const path = require('path');
 const Book = require('../Models/Book');
 
-exports.createBook = async (req, res, next) => {
+exports.createBook = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'Image manquante' });
   }
 
-  const filename =
-    Date.now() + '-' + req.file.originalname.split('.')[0] + '.webp';
+  const filename = `${Date.now()}-${req.file.originalname.split('.')[0]}.webp`;
   const filepath = path.join(__dirname, `../images/${filename}`);
 
   await sharp(req.file.path).webp({ quality: 80 }).toFile(filepath);
@@ -23,7 +22,7 @@ exports.createBook = async (req, res, next) => {
     userId: req.auth.userId,
     imageUrl: `${req.protocol}://${req.get('host')}/images/${filename}`,
   });
-  await book
+  return book
     .save()
     .then(() => {
       res.status(201).json({ message: 'Livre enregistré !' });
@@ -33,12 +32,13 @@ exports.createBook = async (req, res, next) => {
     });
 };
 
-exports.modifyBook = async (req, res, next) => {
+exports.modifyBook = async (req, res) => {
   try {
     let bookObject;
     if (req.file) {
-      const filename =
-        Date.now() + '-' + req.file.originalname.split('.')[0] + '.webp';
+      const filename = `${Date.now()}-${
+        req.file.originalname.split('.')[0]
+      }.webp`;
       const filepath = path.join(__dirname, `../images/${filename}`);
 
       await sharp(req.file.path).webp({ quality: 80 }).toFile(filepath);
@@ -53,8 +53,8 @@ exports.modifyBook = async (req, res, next) => {
 
     await Book.findOne({ _id: req.params.id })
       .then((book) => {
-        if (book.userId != req.auth.userId) {
-          res.status(401).json({ message: 'Non-autorisé' });
+        if (book.userId !== req.auth.userId) {
+          res.status(403).json({ message: 'Non-autorisé' });
         } else {
           Book.updateOne(
             { _id: req.params.id },
@@ -72,11 +72,11 @@ exports.modifyBook = async (req, res, next) => {
   }
 };
 
-exports.deleteBook = (req, res, next) => {
+exports.deleteBook = (req, res) => {
   Book.findOne({ _id: req.params.id })
     .then((book) => {
       if (book.userId.toString() !== req.auth.userId) {
-        return res.status(401).json({ message: 'Non autorisé' });
+        res.status(403).json({ message: 'Non autorisé' });
       }
       const filename = book.imageUrl.split('/images/')[1];
       const filepath = path.join(__dirname, '../images', filename);
@@ -87,30 +87,26 @@ exports.deleteBook = (req, res, next) => {
         }
 
         Book.deleteOne({ _id: req.params.id })
-          .then(() =>
-            res
-              .status(200)
-              .json({ message: 'Livre supprimé !', bookUserId: book.userId })
-          )
-          .catch((error) => res.status(400).json({ error }));
+          .then(() => res.status(204).json())
+          .catch((catchederror) => res.status(400).json({ catchederror }));
       });
     })
     .catch((error) => res.status(500).json({ error }));
 };
 
-exports.getOneBook = (req, res, next) => {
+exports.getOneBook = (req, res) => {
   Book.findOne({ _id: req.params.id })
     .then((book) => res.status(200).json(book))
     .catch((error) => res.status(404).json({ error }));
 };
 
-exports.getAllBooks = (req, res, next) => {
+exports.getAllBooks = (req, res) => {
   Book.find()
     .then((books) => res.status(201).json(books))
     .catch((error) => res.status(400).json({ error }));
 };
 
-exports.getBestBooks = (req, res, next) => {
+exports.getBestBooks = (req, res) => {
   Book.find()
     .sort({ averageRating: -1 })
     .limit(3)
@@ -118,15 +114,12 @@ exports.getBestBooks = (req, res, next) => {
     .catch((error) => res.status(400).json({ error }));
 };
 
-exports.postBookRating = (req, res, next) => {
+exports.postBookRating = (req, res) => {
   Book.findOne({ _id: req.params.id })
     .then((book) => {
       if (book.ratings.find((rating) => rating.userId === req.auth.userId)) {
-        return res
-          .status(400)
-          .json({ message: 'Vous avez déjà noté ce livre' });
+        res.status(400).json({ message: 'Vous avez déjà noté ce livre' });
       }
-      console.log('BODY:', req.body);
       const newRating = {
         userId: req.auth.userId,
         grade: req.body.rating,
@@ -134,8 +127,8 @@ exports.postBookRating = (req, res, next) => {
 
       book.ratings.push(newRating);
       const total = book.ratings.reduce((acc, r) => acc + r.grade, 0);
+      // eslint-disable-next-line no-param-reassign
       book.averageRating = total / book.ratings.length;
-      console.log('UPDATED BOOK:', book);
 
       book
         .save()
