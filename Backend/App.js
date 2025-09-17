@@ -1,9 +1,11 @@
 const express = require('express');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const app = express();
 
 const mongoose = require('mongoose');
+
 app.use(express.json());
 
 const bookRoutes = require('./Routes/Books');
@@ -34,7 +36,7 @@ app.use('/api/books', bookRoutes);
 app.use('/api/auth', userRoutes);
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.error('GLOBAL ERROR:', err);
   res
     .status(500)
