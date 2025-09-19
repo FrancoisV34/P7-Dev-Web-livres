@@ -129,6 +129,8 @@ exports.postBookRating = (req, res) => {
       const total = book.ratings.reduce((acc, r) => acc + r.grade, 0);
       // eslint-disable-next-line no-param-reassign
       book.averageRating = total / book.ratings.length;
+      // eslint-disable-next-line no-param-reassign
+      book.averageRating = Math.round(book.averageRating * 10) / 10;
 
       book
         .save()
